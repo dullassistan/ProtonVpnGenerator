@@ -24,19 +24,9 @@ namespace ProtonVpnGenerator.Services
 
         public async Task<JsonElement> CreateSessionAsync()
         {
-            var res = await _httpClient.PostAsJsonAsync("/api/proton/session", new { });
-            var content = await res.Content.ReadAsStringAsync();
+            JsonElement root = await PostAndValidateAsync("/api/proton/session", new { }, "Создание сессии");
 
-            using var doc = JsonDocument.Parse(content);
-            if (!doc.RootElement.TryGetProperty("ok", out var okProp) || !okProp.GetBoolean())
-            {
-                string error = doc.RootElement.TryGetProperty("error", out var errProp)
-                    ? errProp.GetString() ?? "Ошибка создания сессии"
-                    : "Неизвестная ошибка создания сессии";
-                throw new Exception(error);
-            }
-
-            if (!doc.RootElement.TryGetProperty("session", out var sessionProp))
+            if (!root.TryGetProperty("session", out var sessionProp))
             {
                 throw new Exception("Ответ API не содержит объекта session");
             }
@@ -46,19 +36,9 @@ namespace ProtonVpnGenerator.Services
 
         public async Task<List<ProtonServer>> GetServersAsync(JsonElement session)
         {
-            var res = await _httpClient.PostAsJsonAsync("/api/proton/servers", new { session });
-            var content = await res.Content.ReadAsStringAsync();
+            JsonElement root = await PostAndValidateAsync("/api/proton/servers", new { session }, "Загрузка серверов");
 
-            using var doc = JsonDocument.Parse(content);
-            if (!doc.RootElement.TryGetProperty("ok", out var okProp) || !okProp.GetBoolean())
-            {
-                string error = doc.RootElement.TryGetProperty("error", out var errProp)
-                    ? errProp.GetString() ?? "Ошибка загрузки серверов"
-                    : "Неизвестная ошибка при загрузке серверов";
-                throw new Exception(error);
-            }
-
-            if (!doc.RootElement.TryGetProperty("servers", out var serversProp))
+            if (!root.TryGetProperty("servers", out var serversProp))
             {
                 throw new Exception("Ответ API не содержит списка серверов");
             }
@@ -69,24 +49,80 @@ namespace ProtonVpnGenerator.Services
 
         public async Task<JsonElement> RegisterCertificateAsync(JsonElement session, string pemPublicKey)
         {
-            var res = await _httpClient.PostAsJsonAsync("/api/proton/certificate", new
+            return await PostAndValidateAsync("/api/proton/certificate", new
             {
                 session,
                 clientPublicKey = pemPublicKey,
                 persistent = true
-            });
-            var content = await res.Content.ReadAsStringAsync();
+            }, "Регистрация сертификата");
+        }
 
-            using var doc = JsonDocument.Parse(content);
-            if (!doc.RootElement.TryGetProperty("ok", out var okProp) || !okProp.GetBoolean())
+        /// <summary>
+        /// Отправляет POST-запрос, устойчиво разбирает ответ и проверяет флаг <c>ok</c>.
+        /// Возвращает клон корневого JSON-элемента (безопасен после освобождения документа).
+        /// Транслирует таймаут, сетевые сбои и не-JSON ответы в понятные сообщения.
+        /// </summary>
+        private async Task<JsonElement> PostAndValidateAsync(string path, object body, string operation)
+        {
+            HttpResponseMessage response;
+            string content;
+            try
             {
-                string error = doc.RootElement.TryGetProperty("error", out var errProp)
-                    ? errProp.GetString() ?? "Ошибка регистрации сертификата"
-                    : "Неизвестная ошибка при регистрации сертификата";
-                throw new Exception(error);
+                response = await _httpClient.PostAsJsonAsync(path, body);
+                content = await response.Content.ReadAsStringAsync();
+            }
+            catch (TaskCanceledException)
+            {
+                throw new Exception($"{operation}: превышено время ожидания ответа сервера ({_httpClient.Timeout.TotalSeconds:0} с). Проверьте подключение к интернету и повторите попытку.");
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"{operation}: не удалось соединиться с API ({BaseUrl}). {ex.Message}");
             }
 
-            return doc.RootElement.Clone();
+            JsonDocument doc;
+            try
+            {
+                doc = JsonDocument.Parse(content);
+            }
+            catch (JsonException)
+            {
+                throw new Exception($"{operation}: сервер вернул неожиданный ответ (HTTP {(int)response.StatusCode} {response.StatusCode}). {DescribeBody(content)}");
+            }
+
+            using (doc)
+            {
+                JsonElement root = doc.RootElement;
+
+                bool ok = root.TryGetProperty("ok", out var okProp) && okProp.ValueKind == JsonValueKind.True;
+                if (!ok)
+                {
+                    string error = root.TryGetProperty("error", out var errProp) && errProp.ValueKind == JsonValueKind.String
+                        ? errProp.GetString() ?? $"{operation}: ошибка"
+                        : $"{operation}: неизвестная ошибка (HTTP {(int)response.StatusCode} {response.StatusCode}).";
+                    throw new Exception(error);
+                }
+
+                return root.Clone();
+            }
+        }
+
+        /// <summary>Формирует короткое безопасное описание тела ответа для сообщения об ошибке.</summary>
+        private static string DescribeBody(string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return "Пустое тело ответа.";
+            }
+
+            string snippet = content.Trim().Replace("\r", " ").Replace("\n", " ");
+            const int maxLength = 200;
+            if (snippet.Length > maxLength)
+            {
+                snippet = snippet.Substring(0, maxLength) + "…";
+            }
+
+            return $"Начало ответа: {snippet}";
         }
     }
 }
