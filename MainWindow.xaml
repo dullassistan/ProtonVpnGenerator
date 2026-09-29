@@ -1,0 +1,575 @@
+<Window x:Class="ProtonVpnGenerator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ProtonVPN Генератор" 
+        Icon="icon.ico"
+        Height="610" Width="930"
+        MinWidth="800" MinHeight="550"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowGradient}"
+        FontFamily="Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.ClearTypeHint="Enabled">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <!-- Header Row -->
+            <RowDefinition Height="Auto"/>
+            <!-- Main Content Grid -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. HEADER WITH EMBEDDED ALERT (NO WINDOW EXPANSION) -->
+        <Border Grid.Row="0" Background="{StaticResource CardBackground}" CornerRadius="7" Padding="10,6" Margin="0,0,0,8" BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Logo & Title -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Source="icon.ico" Width="28" Height="28" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="ProtonVPN Генератор" FontSize="13.5" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"/>
+                        <TextBlock Text="AmneziaWG • WireSock • Clash" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 2. Middle area: Credits & Alert Message -->
+                <Grid Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10,0">
+                    <!-- Faint grey credits by default -->
+                    <TextBlock x:Name="TxtCredits" 
+                               Text="Thanks @llimonix, @WARP 1_1_1._1" 
+                               FontSize="10" 
+                               FontWeight="SemiBold"
+                               Foreground="#9CA3AF" 
+                               VerticalAlignment="Center" 
+                               HorizontalAlignment="Center"/>
+
+                    <!-- Centered Alert Message (Shows over credits on events) -->
+                    <Border x:Name="AlertBox" 
+                            CornerRadius="6" Padding="10,4" 
+                            HorizontalAlignment="Center" VerticalAlignment="Center" 
+                            Visibility="Collapsed">
+                        <TextBlock x:Name="TxtAlert" FontSize="11" FontWeight="Bold" TextAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                    </Border>
+                </Grid>
+
+                <!-- Session & Timer Area -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Grid x:Name="PnlArrowConnect" VerticalAlignment="Center" Margin="0,0,8,0" Visibility="Visible" ToolTip="Нажмите «Получить серверы»">
+                        <Canvas Width="36" Height="20" VerticalAlignment="Center">
+                            <Line X1="2" Y1="10" X2="24" Y2="10" Stroke="#DC2626" StrokeThickness="3.5" StrokeStartLineCap="Round"/>
+                            <Polygon Points="20,4 32,10 20,16" Fill="#DC2626"/>
+                        </Canvas>
+                    </Grid>
+
+                    <Button x:Name="BtnConnect" 
+                            Content="⚡ Получить серверы" 
+                            Style="{StaticResource ConvexBtnIndigo}" 
+                            Height="27" Padding="12,0"
+                            Click="BtnConnect_Click"/>
+
+                    <Border x:Name="PnlSessionTimer" Visibility="Collapsed" Background="#E8E4F8" CornerRadius="6" Padding="8,3" Margin="4,0,0,0" BorderBrush="#C7BEEA" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="⏱️" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtTimer" Text="23:59:59" FontWeight="Bold" FontFamily="Consolas" Foreground="#3730A3" FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="активна" FontSize="10.5" FontWeight="SemiBold" Foreground="#4F46E5" VerticalAlignment="Center" Margin="4,0,6,0"/>
+                            <Button Content="Сбросить" 
+                                    Style="{StaticResource ConvexBtnRose}" 
+                                     Height="21" Padding="7,0" FontSize="10"
+                                    Click="BtnResetSession_Click"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 2. MAIN CONTENT: 2-COLUMN SPLIT (HEIGHT 700 PX) -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="360"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*" MinWidth="360"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT COLUMN: ALL COMPACT SETTINGS IN ONE CARD -->
+            <Border Grid.Column="0" Background="{StaticResource CardBackground}" CornerRadius="7" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Padding="7">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <!-- 3.1 ВЫБОР СЕРВЕРА -->
+                        <Border Background="{StaticResource CardInnerBg}" CornerRadius="5" Padding="6,5" Margin="0,0,0,5" BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
+                            <StackPanel>
+                                <!-- Country filter section: Top centered 'Все страны' + 5x2 UniformGrid -->
+                                <StackPanel Margin="0,0,0,4">
+                                    <RadioButton x:Name="BtnFilterAll" 
+                                                 Content="Все страны" 
+                                                 GroupName="CountryFilterGroup"
+                                                 Style="{StaticResource FilterChip}" 
+                                                 HorizontalAlignment="Center" 
+                                                 Padding="16,0" 
+                                                 Margin="0,0,0,3"
+                                                 FontSize="10.5"
+                                                 Visibility="Collapsed"
+                                                 Checked="BtnFilterAll_Checked"/>
+                                    
+                                    <UniformGrid x:Name="GridCountryFilters" Columns="5" HorizontalAlignment="Stretch"/>
+                                </StackPanel>
+
+                                <!-- Server Select Dropdown -->
+                                <ComboBox x:Name="CmbServers" 
+                                          Height="28" 
+                                          FontSize="11.5" 
+                                          VerticalContentAlignment="Center"
+                                          Padding="6,0,0,0"
+                                          SelectionChanged="CmbServers_SelectionChanged"
+                                          BorderBrush="{StaticResource CardBorder}">
+                                    <ComboBox.ItemContainerStyle>
+                                        <Style TargetType="ComboBoxItem">
+                                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                            <Setter Property="MinHeight" Value="24"/>
+                                            <Setter Property="Padding" Value="4,2"/>
+                                        </Style>
+                                    </ComboBox.ItemContainerStyle>
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="15" Height="15" Margin="0,0,7,0" VerticalAlignment="Center" Fill="{Binding LoadColor}"/>
+                                                <TextBlock Text="{Binding ExitCountry}" FontWeight="Bold" Foreground="#4F46E5" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding CleanName}" FontWeight="SemiBold" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding City, StringFormat='({0})'}" Foreground="#6B7280" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Load, StringFormat='[{0}%]'}" Foreground="#4B5563" FontWeight="Medium" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 2.2 ВЫБОР КЛИЕНТА (С ОФИЦИАЛЬНЫМИ ЗНАЧКАМИ) -->
+                        <Border Background="{StaticResource CardInnerBg}" CornerRadius="5" Padding="7,6" Margin="0,0,0,6" BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <RadioButton x:Name="RbClientAwg" Grid.Column="0" Style="{StaticResource ClientCard}" IsChecked="True" Checked="Client_Changed">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <Image Source="Assets/awg.png" Width="18" Height="18" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        <TextBlock Text="AmneziaWG" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </RadioButton>
+
+                                <RadioButton x:Name="RbClientWiresock" Grid.Column="1" Style="{StaticResource ClientCard}" Checked="Client_Changed">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <Image Source="Assets/wiresock.png" Width="18" Height="18" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        <TextBlock Text="WireSock" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </RadioButton>
+
+                                <RadioButton x:Name="RbClientClash" Grid.Column="2" Style="{StaticResource ClientCard}" Checked="Client_Changed">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <Image Source="Assets/clash.png" Width="18" Height="18" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        <TextBlock Text="Clash" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </RadioButton>
+                            </Grid>
+                        </Border>
+
+                        <!-- 2.3 ПОРТЫ -->
+                        <Border Background="{StaticResource CardInnerBg}" CornerRadius="5" Padding="6,4" Margin="0,0,0,5" BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
+                            <WrapPanel x:Name="PnlPorts" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <RadioButton Content="80" Style="{StaticResource PortPill}" Tag="80" Checked="Port_Checked"/>
+                                <RadioButton Content="88" Style="{StaticResource PortPill}" Tag="88" Checked="Port_Checked"/>
+                                <RadioButton Content="443" Style="{StaticResource PortPill}" Tag="443" Checked="Port_Checked"/>
+                                <RadioButton Content="1194" Style="{StaticResource PortPill}" Tag="1194" Checked="Port_Checked"/>
+                                <RadioButton Content="1224" Style="{StaticResource PortPill}" Tag="1224" Checked="Port_Checked"/>
+                                <RadioButton Content="4500" Style="{StaticResource PortPill}" Tag="4500" Checked="Port_Checked"/>
+                                <RadioButton Content="4569" Style="{StaticResource PortPill}" Tag="4569" Checked="Port_Checked"/>
+                                <RadioButton Content="5060" Style="{StaticResource PortPill}" Tag="5060" Checked="Port_Checked"/>
+                                <RadioButton Content="51820" Style="{StaticResource PortPill}" Tag="51820" IsChecked="True" Checked="Port_Checked"/>
+                            </WrapPanel>
+                        </Border>
+
+                        <!-- 2.4 ОБФУСКАЦИЯ И ПАРАМЕТРЫ (СИММЕТРИЧНЫЕ ВЫПУКЛЫЕ КНОПКИ) -->
+                        <Border Background="{StaticResource CardInnerBg}" CornerRadius="5" Padding="7,6" BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
+                            <StackPanel>
+                                <!-- === AWG 1.0 === -->
+                                <Border BorderBrush="#EDE9FE" BorderThickness="0,0,0,1" Padding="0,0,0,5" Margin="0,0,0,5">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <CheckBox x:Name="SwAwg1" 
+                                                          Content="AWG 1.0" 
+                                                          FontWeight="Bold" FontSize="10.5" Foreground="#4F46E5"
+                                                          Style="{StaticResource ToggleSwitchStyle}" 
+                                                          Tag="{StaticResource AccentIndigo}"
+                                                          Click="SwAwg1_Click"/>
+
+                                                <StackPanel x:Name="PnlAwg1Custom" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0" Opacity="0.8" IsEnabled="False">
+                                                    <TextBox x:Name="TxtJc" Tag="jc" Text="" Width="32" HorizontalContentAlignment="Center" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed" Margin="0,0,3,0"/>
+                                                    <TextBox x:Name="TxtJmin" Tag="jmin" Text="" Width="38" HorizontalContentAlignment="Center" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed" Margin="0,0,3,0"/>
+                                                    <TextBox x:Name="TxtJmax" Tag="jmax" Text="" Width="44" HorizontalContentAlignment="Center" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Button x:Name="BtnMasque" Content="Masque" 
+                                                        Style="{StaticResource ConvexBtnAmber}" 
+                                                        Width="86" Height="25" Margin="0,0,4,0" Opacity="0.55"
+                                                        ToolTip="Включить / отключить протокол MASQUE (HTTP/3) для Clash"
+                                                        Click="BtnMasque_Click"/>
+                                                <Button x:Name="BtnAwgMasque" Content="Awg+Masque" 
+                                                        Style="{StaticResource ConvexBtnRose}" 
+                                                        Width="86" Height="25" Margin="0" Opacity="0.55"
+                                                        ToolTip="Включить / отключить гибридный режим AWG 2.0 + MASQUE Fallback для Clash"
+                                                        Click="BtnAwgMasque_Click"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <DockPanel x:Name="PnlAwg1Options" Visibility="Collapsed" Margin="2,4,0,0">
+                                            <Button x:Name="BtnAwg1Random" DockPanel.Dock="Right" Content="🎲 Случайно" 
+                                                    Style="{StaticResource ConvexBtnIndigo}" 
+                                                    Width="86" Height="23"
+                                                    HorizontalAlignment="Right" Margin="0"
+                                                    Click="BtnAwg1Random_Click"/>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <RadioButton x:Name="RbJunk1" Content="3/1/3" FontWeight="SemiBold" FontSize="10.5" Margin="0,0,10,0" IsChecked="True" Checked="ConfigSetting_Changed"/>
+                                                <RadioButton x:Name="RbJunk2" Content="30/10/30" FontWeight="SemiBold" FontSize="10.5" Margin="0,0,10,0" Checked="ConfigSetting_Changed"/>
+                                                <RadioButton x:Name="RbJunk3" Content="Свой" FontWeight="SemiBold" FontSize="10.5" Margin="0,0,4,0" Checked="ConfigSetting_Changed"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- === AWG 2.0 === -->
+                                <Border BorderBrush="#EDE9FE" BorderThickness="0,0,0,1" Padding="0,0,0,5" Margin="0,0,0,5">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <CheckBox x:Name="SwAwg2" 
+                                                          Content="AWG 2.0 (QUIC)" 
+                                                          FontWeight="Bold" FontSize="11" Foreground="#059669"
+                                                          Style="{StaticResource ToggleSwitchStyle}" 
+                                                          Tag="{StaticResource AccentEmerald}"
+                                                          IsChecked="True"
+                                                          Click="SwAwg2_Click"/>
+                                                <CheckBox x:Name="SwAwg2Custom" 
+                                                          Style="{StaticResource ToggleSwitchStyle}" 
+                                                          Tag="{StaticResource AccentEmerald}"
+                                                          Margin="6,0,0,0"
+                                                          ToolTip="Показать поля I2–I5"
+                                                          Click="SwAwg2Custom_Click"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Button x:Name="BtnAwg2Domain" Content="🌐 Из домена" 
+                                                        Style="{StaticResource ConvexBtnBlue}" 
+                                                        Width="86" Height="25" Margin="0,0,4,0"
+                                                        Click="BtnAwg2Domain_Click"/>
+                                                <Button x:Name="BtnAwg2Random" Content="🎲 Случайно" 
+                                                        Style="{StaticResource ConvexBtnEmerald}" 
+                                                        Width="86" Height="25" Margin="0"
+                                                        Click="BtnAwg2Random_Click"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- AWG 2.0 Fields for AmneziaWG / Clash -->
+                                        <StackPanel x:Name="PnlAwg2Fields" Visibility="Visible" Margin="0,4,0,0">
+                                            <DockPanel Margin="0,0,0,4">
+                                                <TextBlock DockPanel.Dock="Left" Text="I1=" Width="24" FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                <TextBox x:Name="TxtI1" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                            </DockPanel>
+                                            <Grid x:Name="PnlAwg2ExtraFields" Visibility="Collapsed">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="5"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="5"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="5"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <DockPanel Grid.Column="0">
+                                                    <TextBlock DockPanel.Dock="Left" Text="I2=" Width="24" FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBox x:Name="TxtI2" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                                </DockPanel>
+                                                <DockPanel Grid.Column="2">
+                                                    <TextBlock DockPanel.Dock="Left" Text="I3=" Width="24" FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBox x:Name="TxtI3" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                                </DockPanel>
+                                                <DockPanel Grid.Column="4">
+                                                    <TextBlock DockPanel.Dock="Left" Text="I4=" Width="24" FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBox x:Name="TxtI4" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                                </DockPanel>
+                                                <DockPanel Grid.Column="6">
+                                                    <TextBlock DockPanel.Dock="Left" Text="I5=" Width="24" FontSize="9.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBox x:Name="TxtI5" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                                </DockPanel>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <!-- WireSock Fields -->
+                                        <StackPanel x:Name="PnlWireSockFields" Visibility="Collapsed" Margin="2,4,0,0">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="58"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="58"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Text="Id:" FontSize="10.5" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                <TextBox x:Name="TxtWireSockId" Grid.Column="1" Text="apteka.ru" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed" Margin="0,0,4,0"/>
+
+                                                <TextBlock Grid.Column="2" Text="Ip:" FontSize="10.5" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                <ComboBox x:Name="CmbWireSockIp" Grid.Column="3" Height="23" FontSize="10" VerticalContentAlignment="Center" SelectionChanged="ConfigSetting_Changed" Margin="0,0,4,0">
+                                                    <ComboBox.ItemContainerStyle>
+                                                        <Style TargetType="ComboBoxItem">
+                                                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                                            <Setter Property="MinHeight" Value="20"/>
+                                                        </Style>
+                                                    </ComboBox.ItemContainerStyle>
+                                                    <ComboBoxItem Content="quic" IsSelected="True"/>
+                                                    <ComboBoxItem Content="dns"/>
+                                                </ComboBox>
+
+                                                <TextBlock Grid.Column="4" Text="Ib:" FontSize="10.5" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                <ComboBox x:Name="CmbWireSockIb" Grid.Column="5" Height="23" FontSize="10" VerticalContentAlignment="Center" SelectionChanged="ConfigSetting_Changed">
+                                                    <ComboBox.ItemContainerStyle>
+                                                        <Style TargetType="ComboBoxItem">
+                                                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                                            <Setter Property="MinHeight" Value="20"/>
+                                                        </Style>
+                                                    </ComboBox.ItemContainerStyle>
+                                                    <ComboBoxItem Content="curl" IsSelected="True"/>
+                                                    <ComboBoxItem Content="chrome"/>
+                                                    <ComboBoxItem Content="firefox"/>
+                                                </ComboBox>
+                                            </Grid>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- === AWG 3.0 === -->
+                                <Border BorderBrush="#EDE9FE" BorderThickness="0,0,0,1" Padding="0,0,0,5" Margin="0,0,0,5">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox x:Name="SwAwg3" 
+                                                      Content="AWG 3.0 (Диапазоны таймаутов)" 
+                                                      FontWeight="Bold" FontSize="10.5" Foreground="#7C3AED"
+                                                      Style="{StaticResource ToggleSwitchStyle}" 
+                                                      Tag="{StaticResource AccentViolet}"
+                                                      Click="SwAwg3_Click"/>
+
+                                            <Button x:Name="BtnAwg3Random" Grid.Column="1" Content="🎲 Случайно" 
+                                                    Style="{StaticResource ConvexBtnViolet}" 
+                                                    Width="86" Height="25"
+                                                    HorizontalAlignment="Right" Margin="0"
+                                                    Click="BtnAwg3Random_Click"/>
+                                        </Grid>
+
+                                        <Grid x:Name="PnlAwg3Options" Visibility="Collapsed" Margin="2,4,0,0">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,2,2">
+                                                <TextBlock Text="CPA:" FontSize="9.5" FontWeight="SemiBold" Width="28" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="TxtCpa" Width="55" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,2,2">
+                                                <TextBlock Text="MHA:" FontSize="9.5" FontWeight="SemiBold" Width="30" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="TxtMha" Width="55" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Margin="0,0,0,2">
+                                                <TextBlock Text="KT:" FontSize="9.5" FontWeight="SemiBold" Width="22" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="TxtKt" Width="55" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,2,0">
+                                                <TextBlock Text="RAT:" FontSize="9.5" FontWeight="SemiBold" Width="28" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="TxtRat" Width="55" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,2,0">
+                                                <TextBlock Text="RKAT:" FontSize="9.5" FontWeight="SemiBold" Width="30" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="TxtRkat" Width="55" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal">
+                                                <TextBlock Text="RT:" FontSize="9.5" FontWeight="SemiBold" Width="22" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="TxtRt" Width="55" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- === AWG 3.1 === -->
+                                <Border BorderBrush="#EDE9FE" BorderThickness="0,0,0,1" Padding="0,0,0,5" Margin="0,0,0,5">
+                                    <StackPanel>
+                                        <CheckBox x:Name="SwAwg31" 
+                                                  Content="AWG 3.1 (Random trailers / Disable cookies)" 
+                                                  FontWeight="Bold" FontSize="10.5" Foreground="#D97706"
+                                                  Style="{StaticResource ToggleSwitchStyle}" 
+                                                  Tag="{StaticResource AccentAmber}"
+                                                  Click="SwAwg31_Click"/>
+
+                                        <StackPanel x:Name="PnlAwg31Options" Visibility="Collapsed" Orientation="Horizontal" Margin="0,4,0,0">
+                                            <CheckBox x:Name="SwRandomTrailers" 
+                                                      Content="Random trailers" 
+                                                      FontWeight="SemiBold"
+                                                      FontSize="10" 
+                                                      Style="{StaticResource ToggleSwitchStyle}" 
+                                                      Tag="#6366F1"
+                                                      Width="142"
+                                                      HorizontalAlignment="Left"
+                                                      Click="ConfigSetting_Changed"/>
+                                            
+                                            <CheckBox x:Name="SwDisableCookies" 
+                                                      Content="Disable cookies" 
+                                                      FontWeight="SemiBold"
+                                                      FontSize="10" 
+                                                      Style="{StaticResource ToggleSwitchStyle}" 
+                                                      Tag="#EA580C"
+                                                      IsChecked="True"
+                                                      Click="ConfigSetting_Changed"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- === EXCLUDE LAN, KEEPALIVE, IPV6 & MTU === -->
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
+                                    <!-- Exclude LAN -->
+                                    <CheckBox x:Name="SwExcludeLan" 
+                                              Content="Исключить LAN" 
+                                              FontWeight="Bold" FontSize="10.5" Foreground="#0891B2"
+                                              Style="{StaticResource ToggleSwitchStyle}" 
+                                              Tag="{StaticResource AccentCyan}"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,6,0"
+                                              Click="ConfigSetting_Changed"/>
+
+                                    <!-- Persistent Keepalive -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                                        <CheckBox x:Name="SwKeepalive" 
+                                                  Content="Keepalive:" 
+                                                  FontWeight="Bold" FontSize="10.5" Foreground="#E11D48"
+                                                  Style="{StaticResource ToggleSwitchStyle}" 
+                                                  Tag="{StaticResource AccentRose}"
+                                                  VerticalAlignment="Center"
+                                                  Click="SwKeepalive_Click"/>
+                                        <TextBox x:Name="TxtKeepalive" Text="25" Width="28" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed" Margin="3,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <!-- IPv6 -->
+                                    <CheckBox x:Name="SwIpv6" 
+                                              Content="IPv6" 
+                                              FontWeight="Bold" FontSize="10.5" Foreground="#8B5CF6"
+                                              Style="{StaticResource ToggleSwitchStyle}" 
+                                              Tag="#8B5CF6"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,6,0"
+                                              Click="ConfigSetting_Changed"/>
+
+                                    <!-- MTU -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="MTU:" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                        <TextBox x:Name="TxtMtu" Text="1420" Width="38" Style="{StaticResource ModernTextBox}" TextChanged="ConfigSetting_Changed" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- RIGHT COLUMN: CONFIG PREVIEW & GLOSSY ACTION BUTTONS -->
+            <Border Grid.Column="2" Background="{StaticResource CardBackground}" CornerRadius="7" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Padding="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <!-- Top title & copy button -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Text Box preview -->
+                        <RowDefinition Height="*"/>
+                        <!-- Action buttons -->
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Config header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Конфигурация" FontWeight="Bold" FontSize="12.5" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="📋 Скопировать" Style="{StaticResource ConvexBtnEmerald}" Height="25" Padding="10,0" Click="BtnCopy_Click"/>
+                    </Grid>
+
+                    <!-- Code / Config Box -->
+                    <TextBox x:Name="TxtConfig" 
+                             Grid.Row="1"
+                             Background="#0F172A" 
+                             Foreground="#38BDF8" 
+                             FontFamily="Cascadia Code, Consolas, Segoe UI Mono" 
+                             FontSize="11" 
+                             Padding="8" 
+                             VerticalScrollBarVisibility="Auto" 
+                             HorizontalScrollBarVisibility="Auto" 
+                             AcceptsReturn="True" 
+                             BorderThickness="0">
+                        <TextBox.Resources>
+                            <Style TargetType="{x:Type Border}">
+                                <Setter Property="CornerRadius" Value="5"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+
+                    <!-- GLOSSY ACTION BUTTONS (PROMINENT GRID) -->
+                    <Grid Grid.Row="2" Margin="0,8,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="6"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="6"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="BtnGenerate" Grid.Row="0" Grid.Column="0" Content="⚡ Сгенерировать" Style="{StaticResource ConvexBtnIndigo}" Height="30" Click="BtnGenerate_Click"/>
+                        <Button x:Name="BtnDownloadSingle" Grid.Row="0" Grid.Column="2" Content="💾 Скачать файл" Style="{StaticResource ConvexBtnBlue}" Height="30" Click="BtnDownloadSingle_Click"/>
+                        <Button x:Name="BtnDownloadCountries" Grid.Row="2" Grid.Column="0" Content="📦 По странам (.zip)" Style="{StaticResource ConvexBtnViolet}" Height="30" Click="BtnDownloadCountries_Click"/>
+                        <Button x:Name="BtnDownloadAll" Grid.Row="2" Grid.Column="2" Content="📁 Все (.zip)" Style="{StaticResource ConvexBtnSlate}" Height="30" Click="BtnDownloadAll_Click"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

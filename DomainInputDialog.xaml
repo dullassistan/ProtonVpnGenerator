@@ -1,0 +1,66 @@
+<Window x:Class="ProtonVpnGenerator.DomainInputDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Генерация I1 из домена" 
+        Icon="icon.ico"
+        Height="195" Width="360"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource WindowGradient}"
+        WindowStyle="SingleBorderWindow"
+        FontFamily="Segoe UI">
+    <Border Padding="14">
+        <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="🌐 Введите домен" 
+                       FontSize="14" 
+                       FontWeight="Bold" 
+                       Foreground="#1E1B4B" 
+                       HorizontalAlignment="Center" 
+                       Margin="0,0,0,4"/>
+            
+            <TextBlock Text="На основе SNI домена будет сформирован QUIC ClientHello" 
+                       FontSize="11" 
+                       Foreground="#4338CA" 
+                       HorizontalAlignment="Center" 
+                       Margin="0,0,0,12"/>
+
+            <TextBox x:Name="TxtDomain" 
+                     Height="30" 
+                     Padding="8,4" 
+                     FontSize="12" 
+                     BorderBrush="#D3CCF0" 
+                     BorderThickness="1"
+                     Background="White"
+                     Text="example.com"
+                     VerticalContentAlignment="Center"
+                     KeyDown="TxtDomain_KeyDown"
+                     Margin="0,0,0,14">
+                <TextBox.Resources>
+                    <Style TargetType="{x:Type Border}">
+                        <Setter Property="CornerRadius" Value="5"/>
+                    </Style>
+                </TextBox.Resources>
+            </TextBox>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Content="Отмена" 
+                        Grid.Column="0" 
+                        Height="28" 
+                        Style="{StaticResource ConvexBtnSlate}"
+                        Click="BtnCancel_Click"/>
+
+                <Button Content="Подтвердить" 
+                        Grid.Column="2" 
+                        Height="28" 
+                        Style="{StaticResource ConvexBtnIndigo}"
+                        Click="BtnConfirm_Click"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>
