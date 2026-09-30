@@ -1,0 +1,17 @@
+# Единая политика окончаний строк.
+# Проект под Windows (.NET/WPF) — текстовые файлы в рабочем дереве как CRLF.
+# В индексе git хранит LF (стандартно), на checkout выдаёт CRLF (eol=crlf).
+* text=auto eol=crlf
+
+# POSIX-скрипты обязаны оставаться LF.
+*.sh text eol=lf
+
+# Бинарные ресурсы — без конверсии окончаний строк.
+*.dll  binary
+*.exe  binary
+*.ico  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.zip  binary
