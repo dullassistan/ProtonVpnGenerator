@@ -26,6 +26,13 @@
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
   </ItemGroup>
 
+  <!-- The test project lives under Tests\; keep its sources out of the app build. -->
+  <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
+    <Page Remove="Tests\**\*.xaml" />
+    <None Remove="Tests\**\*" />
+  </ItemGroup>
+
   <ItemGroup>
     <Resource Include="Assets\**\*" />
     <Resource Include="icon.ico" />
