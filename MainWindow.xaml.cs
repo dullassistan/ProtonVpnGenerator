@@ -322,10 +322,8 @@ namespace ProtonVpnGenerator
 
             _serversList = await _apiService.GetServersAsync(_currentSession.Value);
 
-            // Group by country
-            _serversByCountry = _serversList
-                .GroupBy(s => string.IsNullOrWhiteSpace(s.ExitCountry) ? "Unknown" : s.ExitCountry)
-                .ToDictionary(g => g.Key, g => g.OrderBy(s => s.Load).ThenBy(s => s.Name).ToList());
+            // Group by country via ServerFilterService
+            _serversByCountry = ServerFilterService.GroupByCountry(_serversList);
 
             // Update download button counts
             int countryCount = _serversByCountry.Count;
@@ -344,14 +342,7 @@ namespace ProtonVpnGenerator
             {
                 GridCountryFilters.Children.Clear();
 
-                var preferredOrder = new List<string> { "US", "PL", "JP", "CA", "NO", "RO", "MX", "SG", "CH", "NL" };
-                var orderedKeys = _serversByCountry.Keys
-                    .OrderBy(c => {
-                        int idx = preferredOrder.FindIndex(p => p.Equals(c, StringComparison.OrdinalIgnoreCase));
-                        return idx >= 0 ? idx : 999;
-                    })
-                    .ThenBy(c => c)
-                    .ToList();
+                var orderedKeys = ServerFilterService.GetOrderedCountryCodes(_serversByCountry.Keys);
 
                 BtnFilterAll.Visibility = Visibility.Visible;
                 BtnFilterAll.IsChecked = string.IsNullOrWhiteSpace(_currentCountryFilter) || _currentCountryFilter.Equals("all", StringComparison.OrdinalIgnoreCase);
@@ -401,26 +392,13 @@ namespace ProtonVpnGenerator
 
         private void ApplyCountryFilter(string countryCode)
         {
-            List<ProtonServer> filtered;
-            if (countryCode == "all")
-            {
-                filtered = _serversList.OrderBy(s => s.Load).ThenBy(s => s.Name).ToList();
-            }
-            else if (_serversByCountry.TryGetValue(countryCode, out var list))
-            {
-                filtered = list;
-            }
-            else
-            {
-                filtered = new List<ProtonServer>();
-            }
-
+            var filtered = ServerFilterService.FilterServers(_serversList, _serversByCountry, countryCode);
             CmbServers.ItemsSource = filtered;
 
-            if (filtered.Count > 0)
+            var initialServer = ServerFilterService.GetPreferredInitialServer(filtered, _settings.SelectedServerId);
+            if (initialServer != null)
             {
-                // Always select the least loaded server (first item in the sorted list)
-                CmbServers.SelectedItem = filtered[0];
+                CmbServers.SelectedItem = initialServer;
             }
         }
 
