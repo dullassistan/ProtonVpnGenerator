@@ -323,5 +323,21 @@ AllowedIPs = {allowedIPs}{peerOptions}";
 
             return memoryStream.ToArray();
         }
+
+        public static (string Extension, string Filter) GetConfigFileFormat(string? client)
+        {
+            bool isClash = client != null && client.Equals("Clash", StringComparison.OrdinalIgnoreCase);
+            return isClash
+                ? ("yaml", "Clash YAML (*.yaml)|*.yaml")
+                : ("conf", "WireGuard Config (*.conf)|*.conf");
+        }
+
+        public static string GetConfigFileName(string cleanServerName, string? client, int downloadIndex = 0)
+        {
+            string ext = client != null && client.Equals("Clash", StringComparison.OrdinalIgnoreCase) ? "yaml" : "conf";
+            return downloadIndex <= 0
+                ? $"Proton_{cleanServerName}.{ext}"
+                : $"Proton_{cleanServerName}_{downloadIndex}.{ext}";
+        }
     }
 }

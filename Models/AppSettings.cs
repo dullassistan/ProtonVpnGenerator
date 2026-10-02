@@ -54,5 +54,11 @@ namespace ProtonVpnGenerator.Models
 
         public string SelectedCountryFilter { get; set; } = "all";
         public string? SelectedServerId { get; set; }
+
+        public bool HasValidSession(long nowMs = 0)
+        {
+            if (nowMs <= 0) nowMs = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            return !string.IsNullOrWhiteSpace(CachedSessionJson) && SessionExpiresMs > nowMs;
+        }
     }
 }

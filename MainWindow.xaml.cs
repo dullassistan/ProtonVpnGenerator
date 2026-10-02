@@ -185,32 +185,28 @@ namespace ProtonVpnGenerator
 
         private async Task CheckCachedSessionAsync()
         {
-            if (!string.IsNullOrWhiteSpace(_settings.CachedSessionJson) && _settings.SessionExpiresMs > 0)
+            if (_settings.HasValidSession())
             {
-                long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                if (now < _settings.SessionExpiresMs)
+                try
                 {
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(_settings.CachedSessionJson);
-                        _currentSession = doc.RootElement.Clone();
-                        _sessionExpires = DateTimeOffset.FromUnixTimeMilliseconds(_settings.SessionExpiresMs);
+                    using var doc = JsonDocument.Parse(_settings.CachedSessionJson!);
+                    _currentSession = doc.RootElement.Clone();
+                    _sessionExpires = DateTimeOffset.FromUnixTimeMilliseconds(_settings.SessionExpiresMs);
 
-                        StartSessionTimer();
-                        await FetchAndRenderServersAsync();
-                        ShowAlert("Сессия восстановлена. Серверы загружены!", false);
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        ShowAlert($"Ошибка восстановления сессии: {ex.Message}", true);
-                        ClearSession();
-                    }
+                    StartSessionTimer();
+                    await FetchAndRenderServersAsync();
+                    ShowAlert("Сессия восстановлена. Серверы загружены!", false);
+                    return;
                 }
-                else
+                catch (Exception ex)
                 {
+                    ShowAlert($"Ошибка восстановления сессии: {ex.Message}", true);
                     ClearSession();
                 }
+            }
+            else
+            {
+                ClearSession();
             }
         }
 
@@ -873,20 +869,15 @@ namespace ProtonVpnGenerator
                 return;
             }
 
-            bool isClash = RbClientClash.IsChecked == true;
-            string ext = isClash ? "yaml" : "conf";
-            string filter = isClash ? "Clash YAML (*.yaml)|*.yaml" : "WireGuard Config (*.conf)|*.conf";
-
+            var format = ConfigBuilderService.GetConfigFileFormat(_settings.SelectedClient);
             int count = _serverDownloadCounts.TryGetValue(server.CleanName, out int currentCount) ? currentCount : 0;
-            string initialName = count == 0
-                ? $"Proton_{server.CleanName}.{ext}"
-                : $"Proton_{server.CleanName}_{count}.{ext}";
+            string initialName = ConfigBuilderService.GetConfigFileName(server.CleanName, _settings.SelectedClient, count);
 
             var sfd = new SaveFileDialog
             {
                 FileName = initialName,
-                Filter = filter,
-                DefaultExt = ext
+                Filter = format.Filter,
+                DefaultExt = format.Extension
             };
 
             if (sfd.ShowDialog() == true)

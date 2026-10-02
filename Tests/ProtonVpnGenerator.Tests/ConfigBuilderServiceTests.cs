@@ -235,5 +235,29 @@ namespace ProtonVpnGenerator.Tests
                 };
             }
         }
+
+        [Theory]
+        [InlineData("Clash", "yaml", "Clash YAML (*.yaml)|*.yaml")]
+        [InlineData("clash", "yaml", "Clash YAML (*.yaml)|*.yaml")]
+        [InlineData("AmneziaWG", "conf", "WireGuard Config (*.conf)|*.conf")]
+        [InlineData("WireSock", "conf", "WireGuard Config (*.conf)|*.conf")]
+        [InlineData(null, "conf", "WireGuard Config (*.conf)|*.conf")]
+        public void GetConfigFileFormat_ReturnsExpectedExtensionAndFilter(string? client, string expectedExt, string expectedFilter)
+        {
+            var (ext, filter) = ConfigBuilderService.GetConfigFileFormat(client);
+            Assert.Equal(expectedExt, ext);
+            Assert.Equal(expectedFilter, filter);
+        }
+
+        [Theory]
+        [InlineData("NL_FREE_1", "AmneziaWG", 0, "Proton_NL_FREE_1.conf")]
+        [InlineData("NL_FREE_1", "WireSock", 2, "Proton_NL_FREE_1_2.conf")]
+        [InlineData("US_FREE_2", "Clash", 0, "Proton_US_FREE_2.yaml")]
+        [InlineData("US_FREE_2", "clash", 3, "Proton_US_FREE_2_3.yaml")]
+        public void GetConfigFileName_GeneratesCorrectNameAndIndex(string cleanName, string client, int index, string expected)
+        {
+            string actual = ConfigBuilderService.GetConfigFileName(cleanName, client, index);
+            Assert.Equal(expected, actual);
+        }
     }
 }
