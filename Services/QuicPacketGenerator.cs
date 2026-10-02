@@ -216,7 +216,7 @@ namespace ProtonVpnGenerator.Services
             return res;
         }
 
-        private static byte[] QuicVarint(long x)
+        internal static byte[] QuicVarint(long x)
         {
             if (x < 0x40)
             {
@@ -249,7 +249,7 @@ namespace ProtonVpnGenerator.Services
             }
         }
 
-        private static int QuicVarintLength(long x)
+        internal static int QuicVarintLength(long x)
         {
             if (x < 0x40) return 1;
             if (x < 0x4000) return 2;

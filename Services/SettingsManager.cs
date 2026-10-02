@@ -9,12 +9,19 @@ namespace ProtonVpnGenerator.Services
     {
         private readonly string _settingsFilePath;
 
-        public SettingsManager()
+        public SettingsManager(string? customPath = null)
         {
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string folder = Path.Combine(appData, "ProtonVpnGenerator");
-            Directory.CreateDirectory(folder);
-            _settingsFilePath = Path.Combine(folder, "settings.json");
+            if (!string.IsNullOrEmpty(customPath))
+            {
+                _settingsFilePath = customPath;
+            }
+            else
+            {
+                string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                string folder = Path.Combine(appData, "ProtonVpnGenerator");
+                Directory.CreateDirectory(folder);
+                _settingsFilePath = Path.Combine(folder, "settings.json");
+            }
         }
 
         public AppSettings Load()

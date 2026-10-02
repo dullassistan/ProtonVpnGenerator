@@ -26,6 +26,10 @@
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ProtonVpnGenerator.Tests" />
+  </ItemGroup>
+
   <!-- The test project lives under Tests\; keep its sources out of the app build. -->
   <ItemGroup>
     <Compile Remove="Tests\**\*.cs" />
