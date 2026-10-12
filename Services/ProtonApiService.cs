@@ -11,7 +11,7 @@ namespace ProtonVpnGenerator.Services
     public class ProtonApiService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://proton-api.vercel.app";
+        private const string BaseUrl = "https://www.api-proton.workers.dev";
 
         public ProtonApiService()
         {
